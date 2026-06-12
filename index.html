@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>နေ့စဉ်သုံးငွေစာရင်း (Expense Tracker)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons for UI -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Padauk:wght@400;700&display=swap');
+        body {
+            font-family: 'Padauk', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom Scrollbar for list */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Mobile App Container -->
+    <main class="max-w-md mx-auto min-h-screen bg-white shadow-xl relative flex flex-col">
+        
+        <!-- Header & Total Card -->
+        <header class="bg-blue-600 text-white p-6 rounded-b-[2.5rem] shadow-md z-10">
+            <h1 class="text-center text-xl font-bold mb-6 tracking-wide">နေ့စဉ်သုံးငွေစာရင်း</h1>
+            <div class="flex flex-col items-center">
+                <p class="text-blue-200 text-sm mb-1">စုစုပေါင်း သုံးငွေ</p>
+                <h2 class="text-4xl font-bold tracking-tight">
+                    <span id="total-amount">၀</span> <span class="text-xl">ကျပ်</span>
+                </h2>
+            </div>
+        </header>
+
+        <!-- Form Section (Hidden by default, shown as modal/bottom sheet) -->
+        <div id="form-container" class="absolute inset-0 bg-black/50 z-50 hidden flex-col justify-end transition-opacity">
+            <div class="bg-white rounded-t-3xl p-6 shadow-2xl animate-slide-up w-full max-w-md mx-auto">
+                <div class="flex justify-between items-center mb-5">
+                    <h3 id="form-title" class="text-lg font-bold text-gray-800">သုံးငွေမှတ်ရန်</h3>
+                    <button type="button" onclick="toggleForm()" class="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+                
+                <form id="expense-form" class="space-y-4">
+                    <input type="hidden" id="expense-id">
+                    
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">အကြောင်းအရာ</label>
+                        <input type="text" id="desc" required placeholder="ဥပမာ - နေ့လည်စာ" 
+                               class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">ပမာဏ (ကျပ်)</label>
+                            <input type="number" id="amount" required min="1" placeholder="၅၀၀၀" 
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">ရက်စွဲ</label>
+                            <input type="date" id="date" required 
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">အမျိုးအစား</label>
+                        <select id="category" required 
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors appearance-none bg-white">
+                            <option value="အစားအသောက်">🍔 အစားအသောက်</option>
+                            <option value="သွားလာစရိတ်">🚕 သွားလာစရိတ်</option>
+                            <option value="အင်တာနက်/ဖုန်း">📱 အင်တာနက်/ဖုန်း</option>
+                            <option value="ကျန်းမာရေး">💊 ကျန်းမာရေး</option>
+                            <option value="အထွေထွေ">🛒 အထွေထွေ</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4 active:bg-blue-700 transition-colors shadow-md">
+                        မှတ်မည်
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Expense List Section -->
+        <div class="flex-1 overflow-y-auto no-scrollbar p-5 pb-24">
+            <div class="flex justify-between items-end mb-4">
+                <h3 class="text-lg font-bold text-gray-800">မှတ်တမ်းများ</h3>
+                <span id="record-count" class="text-sm text-gray-500">၀ ခု</span>
+            </div>
+            
+            <ul id="expense-list" class="space-y-3">
+                <!-- Data will be injected here via JS -->
+            </ul>
+            
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden flex-col items-center justify-center py-10 text-center opacity-60">
+                <i class="ph ph-receipt text-6xl text-gray-400 mb-3"></i>
+                <p class="text-gray-500">မှတ်တမ်းမရှိသေးပါ။<br>အောက်ပါခလုတ်ကိုနှိပ်၍ စတင်မှတ်သားပါ။</p>
+            </div>
+        </div>
+
+        <!-- Floating Action Button (FAB) -->
+        <button onclick="openAddForm()" class="absolute bottom-6 right-6 w-14 h-14 bg-blue-600 rounded-full text-white shadow-lg flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all z-40">
+            <i class="ph ph-plus text-2xl font-bold"></i>
+        </button>
+
+    </main>
+
+    <script>
+        // System State
+        let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+        let isEditing = false;
+
+        // DOM Elements
+        const formContainer = document.getElementById('form-container');
+        const form = document.getElementById('expense-form');
+        const expenseList = document.getElementById('expense-list');
+        const totalAmountEl = document.getElementById('total-amount');
+        const emptyState = document.getElementById('empty-state');
+        const recordCount = document.getElementById('record-count');
+        
+        // Form Inputs
+        const idInput = document.getElementById('expense-id');
+        const descInput = document.getElementById('desc');
+        const amountInput = document.getElementById('amount');
+        const dateInput = document.getElementById('date');
+        const categoryInput = document.getElementById('category');
+        const formTitle = document.getElementById('form-title');
+        const submitBtn = document.getElementById('submit-btn');
+
+        // Initialize Date to Today
+        dateInput.valueAsDate = new Date();
+
+        // UI Functions
+        function toggleForm() {
+            if (formContainer.classList.contains('hidden')) {
+                formContainer.classList.remove('hidden');
+                formContainer.classList.add('flex');
+            } else {
+                formContainer.classList.add('hidden');
+                formContainer.classList.remove('flex');
+            }
+        }
+
+        function openAddForm() {
+            isEditing = false;
+            form.reset();
+            dateInput.valueAsDate = new Date(); // Reset to today
+            idInput.value = '';
+            formTitle.textContent = "သုံးငွေမှတ်ရန်";
+            submitBtn.textContent = "မှတ်မည်";
+            toggleForm();
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US').format(amount);
+        }
+
+        function getCategoryIcon(category) {
+            const icons = {
+                'အစားအသောက်': 'ph-hamburger',
+                'သွားလာစရိတ်': 'ph-taxi',
+                'အင်တာနက်/ဖုန်း': 'ph-device-mobile',
+                'ကျန်းမာရေး': 'ph-pill',
+                'အထွေထွေ': 'ph-shopping-cart'
+            };
+            return icons[category] || 'ph-receipt';
+        }
+
+        function getCategoryColor(category) {
+             const colors = {
+                'အစားအသောက်': 'bg-orange-100 text-orange-600',
+                'သွားလာစရိတ်': 'bg-blue-100 text-blue-600',
+                'အင်တာနက်/ဖုန်း': 'bg-purple-100 text-purple-600',
+                'ကျန်းမာရေး': 'bg-red-100 text-red-600',
+                'အထွေထွေ': 'bg-gray-100 text-gray-600'
+            };
+            return colors[category] || 'bg-gray-100 text-gray-600';
+        }
+
+        // Core CRUD Functions
+        function renderExpenses() {
+            expenseList.innerHTML = '';
+            let totalAmount = 0;
+
+            if (expenses.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+            } else {
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+                
+                // Sort by date descending
+                const sortedExpenses = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                sortedExpenses.forEach(expense => {
+                    totalAmount += Number(expense.amount);
+                    
+                    const li = document.createElement('li');
+                    li.className = "bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between transition-transform hover:scale-[1.01]";
+                    
+                    li.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl ${getCategoryColor(expense.category)}">
+                                <i class="ph ${getCategoryIcon(expense.category)}"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 text-[15px]">${expense.desc}</h4>
+                                <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                                    <span>${expense.category}</span>
+                                    <span>•</span>
+                                    <span>${expense.date}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end gap-2">
+                            <span class="font-bold text-gray-800">${formatCurrency(expense.amount)} Ks</span>
+                            <div class="flex gap-2">
+                                <button onclick="editExpense('${expense.id}')" class="p-1.5 text-blue-500 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                                    <i class="ph ph-pencil-simple"></i>
+                                </button>
+                                <button onclick="deleteExpense('${expense.id}')" class="p-1.5 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
+                                    <i class="ph ph-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    expenseList.appendChild(li);
+                });
+            }
+
+            totalAmountEl.textContent = formatCurrency(totalAmount);
+            recordCount.textContent = `${expenses.length} ခု`;
+        }
+
+        // Add & Update Action
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const expenseData = {
+                id: isEditing ? idInput.value : Date.now().toString(),
+                desc: descInput.value,
+                amount: amountInput.value,
+                date: dateInput.value,
+                category: categoryInput.value
+            };
+
+            if (isEditing) {
+                expenses = expenses.map(exp => exp.id === expenseData.id ? expenseData : exp);
+            } else {
+                expenses.push(expenseData);
+            }
+
+            saveData();
+            renderExpenses();
+            toggleForm();
+            form.reset();
+        });
+
+        // Edit Action
+        function editExpense(id) {
+            const expense = expenses.find(exp => exp.id === id);
+            if (!expense) return;
+
+            isEditing = true;
+            idInput.value = expense.id;
+            descInput.value = expense.desc;
+            amountInput.value = expense.amount;
+            dateInput.value = expense.date;
+            categoryInput.value = expense.category;
+
+            formTitle.textContent = "ပြင်ဆင်မည်";
+            submitBtn.textContent = "သိမ်းမည်";
+            toggleForm();
+        }
+
+        // Delete Action
+        function deleteExpense(id) {
+            if (confirm("ဒီမှတ်တမ်းကို ဖျက်မှာ သေချာပြီလား?")) {
+                expenses = expenses.filter(exp => exp.id !== id);
+                saveData();
+                renderExpenses();
+            }
+        }
+
+        // Local Storage
+        function saveData() {
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+        }
+
+        // Initial Load
+        renderExpenses();
+
+    </script>
+</body>
+</html>
